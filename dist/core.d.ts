@@ -143,3 +143,5 @@ export declare const evaluationSchema: z.ZodObject<{
 export type Evaluation = z.infer<typeof evaluationSchema>;
 export declare function validateAnswers(answers: Answer[], questions: Question[]): Answer[];
 export declare function summarize(input: BrandRequest, answers: Answer[], metadata: Omit<Evaluation, 'axes' | 'verdict' | 'version' | 'provider'>): Evaluation;
+/** Deterministic JST display: identical during SSR and browser hydration. */
+export declare function formatJst(value: string): string;
