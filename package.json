@@ -1,0 +1,51 @@
+{
+  "name": "@sunagaku/brand-check",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "MIT",
+  "description": "Transparent brand criteria and independent Decisions / Jev evaluations",
+  "exports": {
+    ".": "./dist/core.js",
+    "./providers": "./dist/providers.js",
+    "./ui": "./dist/ui.js",
+    "./style.css": "./src/style.css",
+    "./report": "./reports/latest.json"
+  },
+  "files": [
+    "dist",
+    "src/style.css",
+    "reports/latest.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.tests.json",
+    "test": "tsx --test tests/*.test.ts tests/*.test.tsx",
+    "check": "npm run typecheck && npm run check:types && npm test && npm run build",
+    "check:types": "tsx scripts/check-types.ts",
+    "eval": "tsx scripts/evaluate.ts",
+    "dev": "tsx scripts/demo.ts"
+  },
+  "dependencies": {
+    "@typesafe-ai/sdk": "^0.6.0",
+    "zod": "^4.6.5"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^5.9.3",
+    "tsx": "^4.21.0",
+    "esbuild": "^0.25.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sean-sunagaku/sunagaku-brand-check.git"
+  }
+}
