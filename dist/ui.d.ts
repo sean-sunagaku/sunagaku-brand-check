@@ -83,7 +83,8 @@ export declare const reportSchema: z.ZodObject<{
     }, z.core.$strip>>;
 }, z.core.$strip>;
 export type Report = z.infer<typeof reportSchema>;
-export declare function BrandCheck({ endpoint, report }: {
+export declare function BrandCheck({ endpoint, report, initialView }: {
     endpoint?: string;
     report?: Report;
+    initialView?: 'check' | 'criteria' | 'reports';
 }): React.JSX.Element;
