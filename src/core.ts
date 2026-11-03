@@ -64,7 +64,10 @@ const probability=z.number().finite().min(0).max(1);
 export const answerSchema=z.object({name:z.string(),choice:z.string(),confidence:probability,probabilities:z.record(z.string(),probability)}).strict();
 export type Answer=z.infer<typeof answerSchema>;
 const axisSchema=z.object({id:axisIdSchema,status:statusSchema,rawStatus:statusSchema,confidence:probability,evidence:z.string().nullable(),reason:z.string(),suggestion:z.string().nullable()}).strict();
-export const evaluationSchema=z.object({provider:providerSchema,model:z.string(),version:z.string(),variant:z.enum(['A','B']),verdict:z.enum(['aligned','clarify','misaligned','insufficient']),axes:z.array(axisSchema).length(4),durationMs:z.number().finite().nonnegative(),inputTokens:z.number().int().nonnegative(),outputTokens:z.number().int().nonnegative(),evaluatedAt:z.string(),}).strict();
+export const evaluationSchema=z.object({provider:providerSchema,model:z.string(),version:z.string(),variant:z.enum(['A','B']),verdict:z.enum(['aligned','clarify','misaligned','insufficient']),axes:z.array(axisSchema).length(4),durationMs:z.number().finite().nonnegative(),inputTokens:z.number().int().nonnegative(),outputTokens:z.number().int().nonnegative(),evaluatedAt:z.string(),}).strict().superRefine((result,ctx)=>{
+  if(new Set(result.axes.map(a=>a.id)).size!==4)ctx.addIssue({code:"custom",message:"Duplicate axis"});
+  if(result.model!==PROVIDERS[result.provider].model)ctx.addIssue({code:"custom",message:"Unexpected model"});
+});
 export type Evaluation=z.infer<typeof evaluationSchema>;
 export function validateAnswers(answers: Answer[], questions: Question[]): Answer[] {
   if(answers.length!==questions.length || new Set(answers.map(a=>a.name)).size!==questions.length) throw new Error('Invalid answer count');
@@ -87,7 +90,7 @@ export function summarize(input: BrandRequest, answers:Answer[], metadata:Omit<E
     let status=rawStatus;
     if(input.purpose==='daily' && (c.id==='practice'||c.id==='expertise')) status='not_applicable';
     else if(a.confidence<0.6 || rawStatus==='not_applicable') status='insufficient';
-    const evidence=e.choice!=='none'?parts.find(p=>p.value===e.choice)?.description??null:null;
+    const evidence=e.confidence>=0.2 && e.choice!=='none'?parts.find(p=>p.value===e.choice)?.description??null:null;
     if((status==='clarify'||status==='misaligned')&&!evidence) status='insufficient';
     const reason=status==='aligned'?c.aligned:status==='clarify'?c.clarify:status==='misaligned'?c.misaligned:status==='not_applicable'?'日常・交流の投稿ではこの基準を要求しません。':'この基準を判断できる本文の根拠が足りません。';
     const suggestion=status==='clarify'||status==='misaligned'?c.id==='practice'?'何を試せるか・何を発見したかを一文で補う。':c.id==='expertise'?'使いどころ・工夫・制約のいずれかを具体的にする。':c.id==='honesty'?'確認した条件と、自分の推測・感想を分ける。':'遊び心を残しつつ、人物への見下しや主題を隠す表現を見直す。':null;

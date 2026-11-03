@@ -4,7 +4,7 @@ import {VERSION,CRITERIA,requestSchema,questionsFor,summarize,validateAnswers,ty
 import {evaluate} from '../src/providers.js';
 const input:BrandRequest={text:'検証用の本文です。役立つ実例を紹介します。',context:'',purpose:'practice',version:VERSION,provider:'decisions'};
 function answers(status:AxisStatus='aligned'):Answer[]{return questionsFor(input.text).map(q=>{const choice=q.name.endsWith('_evidence')?'p0':status;return {name:q.name,choice,confidence:.9,probabilities:Object.fromEntries(q.choices.map(c=>[c.value,c.value===choice?1:0]))};});}
-const meta={model:'test',variant:'A',durationMs:1,inputTokens:2,outputTokens:0,evaluatedAt:'2026-11-03T00:00:00Z'} satisfies Parameters<typeof summarize>[2];
+const meta={model:'gpt-6-luna',variant:'A',durationMs:1,inputTokens:2,outputTokens:0,evaluatedAt:'2026-11-03T00:00:00Z'} satisfies Parameters<typeof summarize>[2];
 test('input limits and strict fields',()=>{assert.throws(()=>requestSchema.parse({...input,text:''}));assert.throws(()=>requestSchema.parse({...input,text:'あ'.repeat(2001)}));assert.throws(()=>requestSchema.parse({...input,secret:'ignored'}));});
 test('all four criteria have independent evidence questions',()=>{assert.equal(questionsFor(input.text).length,8);assert.equal(CRITERIA.length,4);});
 test('align, clarify, misalign, insufficient aggregation',()=>{for(const status of ['aligned','clarify','misaligned','insufficient']){assert.equal(summarize(input,answers(status==='aligned'?'aligned':status==='clarify'?'clarify':status==='misaligned'?'misaligned':'insufficient'),meta).verdict,status);}});
@@ -14,3 +14,5 @@ test('low confidence and unsupported negative evidence cannot condemn input',()=
 test('unknown applicability cannot turn all axes into success',()=>{assert.equal(summarize(input,answers('not_applicable'),meta).verdict,'insufficient');});
 test('provider response is parsed independently from UI',async()=>{const aa=answers();const fake:typeof fetch=async()=>Response.json({model:'gpt-6-luna',answers:aa.map(a=>({...a,type:'choice',probabilities:Object.entries(a.probabilities).map(([value,probability])=>({value,probability}))})),usage:{input_tokens:123,output_tokens:0}});const result=await evaluate(input,{apiKey:'fake',signal:new AbortController().signal,fetcher:fake});assert.equal(result.provider,'decisions');assert.equal(result.verdict,'aligned');});
 test('refusal or malformed response fails instead of fabricating result',async()=>{const fake:typeof fetch=async()=>Response.json({model:'gpt-6-luna',answers:[{name:'practice',type:'refusal'}],usage:{input_tokens:1,output_tokens:0}});await assert.rejects(evaluate(input,{apiKey:'fake',signal:new AbortController().signal,fetcher:fake}));});
+
+test('very weak evidence cannot support a negative judgment',()=>{const data=answers('misaligned').map(a=>a.name.endsWith('_evidence')?{...a,confidence:.01}:a);assert.equal(summarize(input,data,meta).verdict,'insufficient');});

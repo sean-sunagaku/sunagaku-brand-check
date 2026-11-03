@@ -58,7 +58,12 @@ export function sharedInput(input) { return { post: input.text, purpose: PURPOSE
 const probability = z.number().finite().min(0).max(1);
 export const answerSchema = z.object({ name: z.string(), choice: z.string(), confidence: probability, probabilities: z.record(z.string(), probability) }).strict();
 const axisSchema = z.object({ id: axisIdSchema, status: statusSchema, rawStatus: statusSchema, confidence: probability, evidence: z.string().nullable(), reason: z.string(), suggestion: z.string().nullable() }).strict();
-export const evaluationSchema = z.object({ provider: providerSchema, model: z.string(), version: z.string(), variant: z.enum(['A', 'B']), verdict: z.enum(['aligned', 'clarify', 'misaligned', 'insufficient']), axes: z.array(axisSchema).length(4), durationMs: z.number().finite().nonnegative(), inputTokens: z.number().int().nonnegative(), outputTokens: z.number().int().nonnegative(), evaluatedAt: z.string(), }).strict();
+export const evaluationSchema = z.object({ provider: providerSchema, model: z.string(), version: z.string(), variant: z.enum(['A', 'B']), verdict: z.enum(['aligned', 'clarify', 'misaligned', 'insufficient']), axes: z.array(axisSchema).length(4), durationMs: z.number().finite().nonnegative(), inputTokens: z.number().int().nonnegative(), outputTokens: z.number().int().nonnegative(), evaluatedAt: z.string(), }).strict().superRefine((result, ctx) => {
+    if (new Set(result.axes.map(a => a.id)).size !== 4)
+        ctx.addIssue({ code: "custom", message: "Duplicate axis" });
+    if (result.model !== PROVIDERS[result.provider].model)
+        ctx.addIssue({ code: "custom", message: "Unexpected model" });
+});
 export function validateAnswers(answers, questions) {
     if (answers.length !== questions.length || new Set(answers.map(a => a.name)).size !== questions.length)
         throw new Error('Invalid answer count');
@@ -89,7 +94,7 @@ export function summarize(input, answers, metadata) {
             status = 'not_applicable';
         else if (a.confidence < 0.6 || rawStatus === 'not_applicable')
             status = 'insufficient';
-        const evidence = e.choice !== 'none' ? parts.find(p => p.value === e.choice)?.description ?? null : null;
+        const evidence = e.confidence >= 0.2 && e.choice !== 'none' ? parts.find(p => p.value === e.choice)?.description ?? null : null;
         if ((status === 'clarify' || status === 'misaligned') && !evidence)
             status = 'insufficient';
         const reason = status === 'aligned' ? c.aligned : status === 'clarify' ? c.clarify : status === 'misaligned' ? c.misaligned : status === 'not_applicable' ? '日常・交流の投稿ではこの基準を要求しません。' : 'この基準を判断できる本文の根拠が足りません。';

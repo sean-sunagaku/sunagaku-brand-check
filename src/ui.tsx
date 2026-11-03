@@ -32,6 +32,7 @@ export function BrandCheck({endpoint='/api/brand-check/analyze',report}:{endpoin
       const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,context,purpose,version:VERSION,provider}),signal:controller.signal});
       const data:unknown=await response.json();
       if(!response.ok){const error=z.object({error:z.string()}).safeParse(data);throw new Error(error.success?error.data.error:'評価できませんでした。時間を置いてお試しください。');}
+      if(controller.signal.aborted)throw new Error('通信を中断しました。');
       const value=evaluationSchema.parse(data);
       if(value.provider!==provider||value.version!==VERSION)throw new Error('評価条件が更新されました。ページを再読み込みしてください。');
       if(revision.current===current&&controllers.current[provider]===controller)setRuns(r=>({...r,[provider]:{status:'success',value}}));
