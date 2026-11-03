@@ -1,7 +1,7 @@
 import {readFile,writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {execFileSync} from 'node:child_process';
-import {VERSION, requestSchema, type Provider} from '../src/core.js';
+import {VERSION, sharedInput, requestSchema, type Provider} from '../src/core.js';
 import {evaluate,requestInstructions} from '../src/providers.js';
 import {reportSchema} from '../src/ui.js';
 import {CASES} from '../tests/cases.js';
@@ -16,7 +16,7 @@ for(const testCase of CASES){
    if(variant!=='A'&&variant!=='B')continue;
    const input=requestSchema.parse({text:testCase.text,purpose:testCase.purpose,provider,version:VERSION});
    const request=requestInstructions(input,variant);
-   const base={id:testCase.id,text:input.text,purpose:input.purpose,expected:testCase.expected,provider,variant,inputHash:hash(JSON.stringify(input)),promptHash:hash(JSON.stringify(request))};
+   const base={id:testCase.id,text:input.text,purpose:input.purpose,expected:testCase.expected,provider,variant,inputHash:hash(JSON.stringify(sharedInput(input))),promptHash:hash(JSON.stringify({version:VERSION,provider,variant,questions:request.questions}))};
    const apiKey=process.env[provider==='decisions'?'OPENAI_API_KEY':'TYPESAFE_API_KEY'];
    if(!apiKey){entries.push({...base,status:'unavailable',error:'APIキー未設定'});continue;}
    try{const result=await evaluate(input,{apiKey,signal:AbortSignal.timeout(12000),variant});entries.push({...base,status:'success',evaluation:result});console.log(`${testCase.id} ${provider} ${variant}: ${result.verdict} ${result.durationMs}ms`);}

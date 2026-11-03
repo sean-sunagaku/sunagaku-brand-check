@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {VERSION,CRITERIA,requestSchema,questionsFor,summarize,validateAnswers,type Answer,type BrandRequest,type AxisStatus} from '../src/core.js';
+import {VERSION,evaluationSchema,CRITERIA,requestSchema,questionsFor,summarize,validateAnswers,type Answer,type BrandRequest,type AxisStatus} from '../src/core.js';
 import {evaluate} from '../src/providers.js';
 const input:BrandRequest={text:'検証用の本文です。役立つ実例を紹介します。',context:'',purpose:'practice',version:VERSION,provider:'decisions'};
 function answers(status:AxisStatus='aligned'):Answer[]{return questionsFor(input.text).map(q=>{const choice=q.name.endsWith('_evidence')?'p0':status;return {name:q.name,choice,confidence:.9,probabilities:Object.fromEntries(q.choices.map(c=>[c.value,c.value===choice?1:0]))};});}
@@ -16,3 +16,5 @@ test('provider response is parsed independently from UI',async()=>{const aa=answ
 test('refusal or malformed response fails instead of fabricating result',async()=>{const fake:typeof fetch=async()=>Response.json({model:'gpt-6-luna',answers:[{name:'practice',type:'refusal'}],usage:{input_tokens:1,output_tokens:0}});await assert.rejects(evaluate(input,{apiKey:'fake',signal:new AbortController().signal,fetcher:fake}));});
 
 test('very weak evidence cannot support a negative judgment',()=>{const data=answers('misaligned').map(a=>a.name.endsWith('_evidence')?{...a,confidence:.01}:a);assert.equal(summarize(input,data,meta).verdict,'insufficient');});
+
+test('duplicate axes and provider/model mismatch are rejected',()=>{const value=summarize(input,answers(),meta);assert.equal(evaluationSchema.safeParse({...value,axes:Array(4).fill(value.axes[0])}).success,false);assert.equal(evaluationSchema.safeParse({...value,model:'other-model'}).success,false);});
