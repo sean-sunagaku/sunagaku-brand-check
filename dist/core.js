@@ -105,3 +105,8 @@ export function summarize(input, answers, metadata) {
     const verdict = applicable.some(a => a.status === 'misaligned') ? 'misaligned' : !applicable.length || applicable.some(a => a.status === 'insufficient') ? 'insufficient' : applicable.some(a => a.status === 'clarify') ? 'clarify' : 'aligned';
     return evaluationSchema.parse({ ...metadata, version: VERSION, provider: input.provider, verdict, axes });
 }
+/** Deterministic JST display: identical during SSR and browser hydration. */
+export function formatJst(value) {
+    const time = Date.parse(value);
+    return Number.isFinite(time) ? new Date(time + 9 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ') + ' JST' : '時刻不明';
+}
